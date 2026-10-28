@@ -1,34 +1,35 @@
-#Realiza as importações das bibliotecas
-import pandas as pd
+from pathlib import Path
+
 import matplotlib.pyplot as plt
-from conncetDB import get_engine
+import pandas as pd
 
-#Abre e armazena o arquivo com a query em uma variável
-with open("kpi_query.sql", "r") as file:
-    query = file.read()
+from connect_db import get_engine
 
-#Utiliza a conexão sql para acessar o banco e rodar a query
+OUTPUT_DIR = Path("Outputs")
+OUTPUT_DIR.mkdir(exist_ok=True)
+
+# Read the query from its own file so it can be edited without touching Python
+query = Path("kpi_query.sql").read_text(encoding="utf-8")
+
+# Run the query against the database
 engine = get_engine()
 df = pd.read_sql(query, engine)
 
-#Monta um excel com os dados extraídos
-df.to_excel("Outputs/report.xlsx", index=False)
+# Export the result to Excel
+df.to_excel(OUTPUT_DIR / "report.xlsx", index=False)
 
+# One group of bars per shift (Turno), one bar per batch (Lote)
 plt.figure(figsize=(10, 6))
-
-#Monta um gráfico que verifica os dados por turno
 for turno in df["Turno"].unique():
     sub = df[df["Turno"] == turno]
-    plt.bar(sub["Lote"] + f" ({turno})", sub["Total_Produzido"], label=f"Turno: {turno}")
+    plt.bar(sub["Lote"] + f" ({turno})", sub["Total_Produzido"], label=f"Shift: {turno}")
 
-#Montagem do Layout fo gráfico
-plt.title("Produção por Lote e Turno")
-plt.xlabel("Lote")
-plt.ylabel("Total_Produzido")
+plt.title("Production by Batch and Shift")
+plt.xlabel("Batch")
+plt.ylabel("Total produced")
 plt.xticks(rotation=45, ha="right")
 plt.tight_layout()
 plt.legend()
 
-#Salva o gráfico em um arquivo .png
-plt.savefig("outputs/chart.png")
+plt.savefig(OUTPUT_DIR / "chart.png")
 plt.close()
